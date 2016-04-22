@@ -6,6 +6,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
 use TYPO3\CMS\Extbase\Service\TypoScriptService;
 use TYPO3\CMS\Fluid\Core\ViewHelper\TagBuilder;
+use TYPO3\CMS\Frontend\ContentObject\Exception\ContentRenderingException;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 /**
@@ -40,6 +41,7 @@ class ImageRendererConfiguration
             $configuration,
             'tt_content.textmedia.settings.responsive_image_rendering'
         );
+        
         $settings = is_array($settings) ? $settings : [];
 
         $this->settings['layoutKey'] =
@@ -51,6 +53,7 @@ class ImageRendererConfiguration
             (isset($settings['sourceCollection']) && is_array($settings['sourceCollection']))
                 ? $settings['sourceCollection']
                 : [];
+        //error_log(print_r($this->settings['sourceCollection'],true));
     }
 
     /**
@@ -75,11 +78,23 @@ class ImageRendererConfiguration
     }
 
     /**
+     * @param int $colPos
      * @return array
+     * @throws ContentRenderingException
      */
-    public function getSourceCollection()
+    public function getSourceCollection($colPos)
     {
-        return $this->settings['sourceCollection'];
+        if (!isset($this->settings['sourceCollection']['colPos'][$colPos])
+            && ! isset($this->settings['sourceCollection']['colPos'][0])) {
+            throw new ContentRenderingException("You need to define the sourceCollection for colPos.0 or your required colPos");
+        }
+
+        if (isset($this->settings['sourceCollection']['colPos'][$colPos]))
+        {
+            return $this->settings['sourceCollection']['colPos'][$colPos];
+        } else {
+            return $this->settings['sourceCollection']['colPos'][0];
+        }
     }
 
     /**

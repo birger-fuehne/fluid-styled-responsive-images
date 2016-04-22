@@ -137,7 +137,21 @@ class ImageRenderer implements FileRendererInterface
             $defaultProcessConfiguration['crop'] = '';
         }
 
-        $this->processSourceCollection($originalFile, $defaultProcessConfiguration);
+        /** @var  \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer $cObj */
+        $cObj = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('TYPO3\\CMS\\Frontend\\ContentObject\\ContentObjectRenderer');
+        $conf = array(
+            'uidInList' => $file->getReferenceProperty('uid_foreign')
+        );
+
+        $mediaCObject = $cObj->getRecords($file->getReferenceProperty('tablenames'), $conf);
+
+        if(count($mediaCObject) !== 1) {
+            throw new \RuntimeException;
+        }
+
+        $colPosOfMediaObject = intval($mediaCObject[0]['colPos'],10);
+
+        $this->processSourceCollection($originalFile,$colPosOfMediaObject, $defaultProcessConfiguration);
 
         $src = $originalFile->process(
             ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
@@ -171,28 +185,32 @@ class ImageRenderer implements FileRendererInterface
 
     /**
      * @param File $originalFile
+     * @param int $colPos The colpos of the content element that is using the file
      * @param array $defaultProcessConfiguration
      */
-    protected function processSourceCollection(File $originalFile, array $defaultProcessConfiguration)
+    protected function processSourceCollection(File $originalFile, $colPos, array $defaultProcessConfiguration)
     {
         $configuration = $this->getConfiguration();
 
-        foreach ($configuration->getSourceCollection() as $sourceCollection) {
+        $sourceCollection = $configuration->getSourceCollection($colPos);
+
+        foreach ($sourceCollection as $sourceCollectionEntry) {
             try {
-                if (!is_array($sourceCollection)) {
+                if (!is_array($sourceCollectionEntry)) {
                     throw new \RuntimeException();
                 }
 
-                if (isset($sourceCollection['sizes'])) {
-                    $this->sizes[] = trim($sourceCollection['sizes'], ' ,');
+                if (isset($sourceCollectionEntry['sizes'])) {
+                    $this->sizes[] = trim($sourceCollectionEntry['sizes'], ' ,');
                 }
 
-                if ((int)$sourceCollection['width'] > (int)$this->defaultWidth) {
+                if ((int)$sourceCollectionEntry['width'] > (int)$this->defaultWidth) {
                     throw new \RuntimeException();
                 }
 
                 $localProcessingConfiguration = $defaultProcessConfiguration;
-                $localProcessingConfiguration['width'] = $sourceCollection['width'];
+
+                $localProcessingConfiguration['width'] = $sourceCollectionEntry['width'];
 
                 $processedFile = $originalFile->process(
                     ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
@@ -201,8 +219,8 @@ class ImageRenderer implements FileRendererInterface
 
                 $url = $configuration->getAbsRefPrefix() . $processedFile->getPublicUrl();
 
-                $this->data['data-' . $sourceCollection['dataKey']] = $url;
-                $this->srcset[] = $url . rtrim(' ' . $sourceCollection['srcset'] ?: '');
+                $this->data['data-' . $sourceCollectionEntry['dataKey']] = $url;
+                $this->srcset[] = $url . rtrim(' ' . $sourceCollectionEntry['srcset'] ?: '');
             } catch (\Exception $ignoredException) {
                 continue;
             }
