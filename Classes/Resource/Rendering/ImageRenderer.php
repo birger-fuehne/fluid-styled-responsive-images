@@ -203,11 +203,7 @@ class ImageRenderer implements FileRendererInterface
                 if (isset($sourceCollectionEntry['sizes'])) {
                     $this->sizes[] = trim($sourceCollectionEntry['sizes'], ' ,');
                 }
-
-                if ((int)$sourceCollectionEntry['width'] > (int)$this->defaultWidth) {
-                    throw new \RuntimeException();
-                }
-
+                
                 $localProcessingConfiguration = $defaultProcessConfiguration;
 
                 $localProcessingConfiguration['width'] = $sourceCollectionEntry['width'];
